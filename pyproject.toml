@@ -1,16 +1,18 @@
 [project]
 name = "email-triage-openenv"
 version = "1.0.0"
-description = "AI-powered email triage environment using OpenEnv"
-authors = [
-    { name="Anil Kumar" }
-]
+description = "AI-powered email triage environment"
+authors = [{ name = "Anil Kumar" }]
 dependencies = [
     "fastapi",
     "uvicorn",
     "pydantic",
-    "requests"
+    "requests",
+    "openenv>=0.2.0"
 ]
+
+[project.scripts]
+server = "server.app:main"
 
 [tool.openenv]
 entrypoint = "server.app:app"
