@@ -1,0 +1,11 @@
+name: email-triage-env
+version: "1.0"
+description: Real-world email triage environment
+
+tasks:
+  - name: easy
+    description: classify emails
+  - name: medium
+    description: generate replies
+  - name: hard
+    description: optimize workflow
