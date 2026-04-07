@@ -32,8 +32,8 @@ reward:
 
 tasks:
   - name: easy
-    description: classify emails correctly
+    description: classify emails
   - name: medium
-    description: generate meaningful replies
+    description: generate responses
   - name: hard
-    description: optimize overall reward
+    description: optimize workflow

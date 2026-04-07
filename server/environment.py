@@ -1,4 +1,5 @@
 from models import Observation, Action, Email
+from server.tasks import TASKS
 
 
 class EmailEnv:
@@ -83,8 +84,24 @@ class EmailEnv:
         )
 
     def state(self):
-        return {
+        state = {
             "steps": self.steps,
             "processed": self.processed,
-            "total_reward": self.total_reward
+            "total_reward": self.total_reward,
+            "correct": self.correct
         }
+
+        # apply graders
+        results = {}
+        for task in TASKS:
+            results[task["name"]] = task["grader"](state)
+
+        state["task_scores"] = results
+
+        return state
+
+    def get_task(self, name):
+        for task in TASKS:
+            if task["name"] == name:
+                return task
+        return None
