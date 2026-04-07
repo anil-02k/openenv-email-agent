@@ -2,7 +2,10 @@ import requests
 import os
 from openai import OpenAI
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.getenv(
+    "BASE_URL",
+    "https://anil2k47-email-triage-openenv.hf.space"
+)
 
 # ✅ REQUIRED ENV VARIABLES
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
