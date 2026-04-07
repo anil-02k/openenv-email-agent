@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from environment import EmailEnv
-from models import Action
+from server.environment import EmailEnv
+from server.models import Action
 
 app = FastAPI()
 env = EmailEnv()
@@ -8,7 +8,11 @@ env = EmailEnv()
 @app.post("/reset")
 def reset():
     obs = env.reset()
-    return {"observation": obs.dict(), "reward": 0.0, "done": False}
+    return {
+        "observation": obs.dict(),
+        "reward": 0.0,
+        "done": False
+    }
 
 @app.post("/step")
 def step(action: Action):
@@ -19,14 +23,14 @@ def step(action: Action):
         "done": done
     }
 
-@app.get("/state")
-def state():
+# TEMPORARY SAFE MODE
+def state(self):
     return {
-        "steps": env.steps,
-        "processed": env.processed,
-        "total_reward": env.total_reward
+        "steps": self.steps,
+        "processed": self.processed,
+        "correct": self.correct,
+        "total_reward": self.total_reward
     }
-
 def main():
     import uvicorn
     uvicorn.run("server.app:app", host="0.0.0.0", port=7860)
