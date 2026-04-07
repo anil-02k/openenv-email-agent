@@ -1,4 +1,4 @@
-from models import Observation, Action, Email
+from server.models import Observation, Action, Email
 from server.tasks import TASKS
 
 

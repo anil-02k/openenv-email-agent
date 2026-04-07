@@ -32,8 +32,8 @@ reward:
 
 tasks:
   - name: easy
-    description: classify emails
+    grader: server.graders:easy_grader
   - name: medium
-    description: generate responses
+    grader: server.graders:medium_grader
   - name: hard
-    description: optimize workflow
+    grader: server.graders:hard_grader
