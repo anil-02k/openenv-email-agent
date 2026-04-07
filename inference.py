@@ -2,23 +2,74 @@ import requests
 import os
 from openai import OpenAI
 
+# ✅ HF SPACE URL
 BASE_URL = os.getenv(
     "BASE_URL",
     "https://anil2k47-email-triage-openenv.hf.space"
 )
 
-# ✅ REQUIRED ENV VARIABLES
+# ✅ ENV VARIABLES
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
-API_KEY = os.getenv("API_KEY")  # ❗ NO DEFAULT
+API_KEY = os.getenv("API_KEY")
 
-# ✅ OPENAI CLIENT (MANDATORY)
+# ✅ OPENAI CLIENT
 client = OpenAI(
     base_url=API_BASE_URL,
     api_key=API_KEY
 )
 
 
+# ✅ SAFE REQUEST
+def safe_post(url, payload):
+    try:
+        res = requests.post(url, json=payload, timeout=10)
+
+        if res.status_code != 200:
+            return None
+
+        return res.json()
+
+    except Exception:
+        return None
+
+
+# ✅ SAFE LLM CALL (CRITICAL FIX)
+def get_action_from_llm(observation):
+    try:
+        prompt = f"""
+You are an email assistant.
+
+Observation:
+{observation}
+
+Return STRICT JSON:
+{{"email_id": 1, "action_type": "classify", "response": ""}}
+"""
+
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": "Email assistant"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2
+        )
+
+        content = response.choices[0].message.content
+
+        # ✅ SAFE PARSING
+        try:
+            return eval(content)
+        except:
+            return {"email_id": 1, "action_type": "classify", "response": ""}
+
+    except Exception:
+        # ✅ FALLBACK IF API FAILS
+        return {"email_id": 1, "action_type": "classify", "response": ""}
+
+
+# ✅ LOGS (STRICT FORMAT)
 def log_start(task):
     print(f"[START] task={task} env=email-env model={MODEL_NAME}")
 
@@ -32,75 +83,51 @@ def log_end(success, steps, score, rewards):
     print(f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}")
 
 
-# ✅ LLM FUNCTION (CRITICAL)
-def get_action_from_llm(observation):
-
-    prompt = f"""
-You are an AI email assistant.
-
-Given the emails:
-{observation}
-
-Choose best action:
-- classify
-- reply
-- ignore
-
-Return STRICT JSON ONLY:
-{{"email_id": 1, "action_type": "classify", "response": ""}}
-"""
-
-    response = client.chat.completions.create(
-        model=MODEL_NAME,
-        messages=[
-            {"role": "system", "content": "You are an intelligent email assistant."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.2
-    )
-
-    content = response.choices[0].message.content
-
-    try:
-        return eval(content)
-    except:
-        # fallback (safe)
-        return {"email_id": 1, "action_type": "classify", "response": ""}
-
-
+# ✅ MAIN RUN
 def run():
-    log_start("easy")
+    try:
+        log_start("easy")
 
-    res = requests.post(f"{BASE_URL}/reset").json()
+        res = safe_post(f"{BASE_URL}/reset", {})
 
-    observation = res["observation"]
+        if res is None:
+            log_end(False, 0, 0.0, [])
+            return
 
-    rewards = []
-    steps = 0
+        observation = res.get("observation", {})
 
-    for i in range(5):
+        rewards = []
+        steps = 0
 
-        # ✅ MUST USE LLM (NOT RANDOM)
-        action = get_action_from_llm(observation)
+        for _ in range(5):
 
-        res = requests.post(f"{BASE_URL}/step", json=action).json()
+            action = get_action_from_llm(observation)
 
-        reward = res["reward"]
-        done = res["done"]
-        observation = res["observation"]
+            res = safe_post(f"{BASE_URL}/step", action)
 
-        rewards.append(reward)
-        steps += 1
+            if res is None:
+                break
 
-        log_step(steps, action["action_type"], reward, done)
+            reward = res.get("reward", 0.0)
+            done = res.get("done", False)
+            observation = res.get("observation", {})
 
-        if done:
-            break
+            rewards.append(reward)
+            steps += 1
 
-    score = min(1.0, sum(rewards) / max(1, len(rewards)))
-    success = score > 0.3
+            log_step(steps, action["action_type"], reward, done)
 
-    log_end(success, steps, score, rewards)
+            if done:
+                break
+
+        score = min(1.0, sum(rewards) / max(1, len(rewards)))
+        success = score > 0.3
+
+        log_end(success, steps, score, rewards)
+
+    except Exception:
+        # ✅ FINAL FAILSAFE (IMPORTANT)
+        log_end(False, 0, 0.0, [])
 
 
 if __name__ == "__main__":
